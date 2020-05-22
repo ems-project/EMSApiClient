@@ -1,0 +1,33 @@
+{
+    "name": "elasticms/api-client",
+    "authors": [
+        {
+            "name": "David Mattei",
+            "email": "david.mattei@smals.be"
+        }
+    ],
+    "require": {
+        "php": "^7.2.5",
+        "ext-json": "*",
+        "symfony/config": "^5.0",
+        "symfony/console": "^5.0",
+        "symfony/dependency-injection": "^5.0",
+        "symfony/dotenv": "^5.0",
+        "symfony/finder": "^5.0",
+        "symfony/http-client": "^5.0",
+        "symfony/http-kernel": "^5.0",
+        "symfony/yaml": "^5.0"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": {
+            "*": "dist"
+        },
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    }
+}

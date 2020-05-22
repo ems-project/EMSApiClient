@@ -1,0 +1,12 @@
+services:
+  _defaults:
+    autowire: true
+    bind:
+      $emsUrl:  '%env(string:EMS_URL)%'
+      $emsToken:  '%env(string:EMS_TOKEN)%'
+
+  App\:
+    resource: '../src'
+
+  Symfony\Component\Console\Application:
+    public: true
