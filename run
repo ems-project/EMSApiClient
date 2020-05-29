@@ -4,22 +4,18 @@
 require_once __DIR__ . '/vendor/autoload.php';
 
 use App\Kernel;
-use Symfony\Component\Console\Application;
+use App\Application;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Dotenv\Dotenv;
 
 (new Dotenv(false))->loadEnv(__DIR__.'/.env');
+
 $_SERVER += $_ENV;
 $_SERVER['SHELL_VERBOSITY'] = OutputInterface::VERBOSITY_NORMAL;
 
 $kernel = new Kernel('dev', $_SERVER['DEBUG'] ?? false);
-$kernel->boot();
 
-$container = $kernel->getContainer();
-
-$application = $container->get(Application::class);
-
-$application->setName('Elasticms API Client');
-
+$application = new Application($kernel);
 $application->run(new ArgvInput());
+

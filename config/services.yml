@@ -5,8 +5,13 @@ services:
       $emsUrl:  '%env(string:EMS_URL)%'
       $emsToken:  '%env(string:EMS_TOKEN)%'
 
+  _instanceof:
+    Symfony\Component\EventDispatcher\EventSubscriberInterface:
+      tags: ['kernel.event_subscriber']
+
   App\:
     resource: '../src'
 
-  Symfony\Component\Console\Application:
-    public: true
+  App\Command\UploadFilesCommand:
+    tags:
+      - { name: console.command, command: api:upload:files }

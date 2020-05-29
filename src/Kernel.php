@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App;
 
 use Symfony\Component\Config\Loader\LoaderInterface;
-use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
-use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\Console\DependencyInjection\AddConsoleCommandPass;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -24,27 +24,11 @@ final class Kernel extends BaseKernel
         $loader->load(__DIR__.'/../config/services.yml');
     }
 
-    protected function build(ContainerBuilder $containerBuilder): void
+    protected function build(ContainerBuilder $container): void
     {
-        $containerBuilder->addCompilerPass($this->createCollectingCompilerPass());
-    }
-
-    private function createCollectingCompilerPass(): CompilerPassInterface
-    {
-        return new class implements CompilerPassInterface
-        {
-            public function process(ContainerBuilder $containerBuilder)
-            {
-                $applicationDefinition = $containerBuilder->findDefinition(Application::class);
-
-                foreach ($containerBuilder->getDefinitions() as $definition) {
-                    if (! is_a($definition->getClass(), Command::class, true)) {
-                        continue;
-                    }
-
-                    $applicationDefinition->addMethodCall('add', [new Reference($definition->getClass())]);
-                }
-            }
-        };
+        $container->addCompilerPass(new RegisterListenersPass(), PassConfig::TYPE_BEFORE_REMOVING);
+        $container->addCompilerPass(new AddConsoleCommandPass(), PassConfig::TYPE_BEFORE_REMOVING);
+        $container->register('event_dispatcher', EventDispatcher::class);
+        $container->getDefinition('event_dispatcher')->setPublic(true);
     }
 }
