@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Api;
+use App\Files;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Finder\Finder;
 
-final class UploadFilesCommand extends Command
+final class UploadFilesCommand extends Command implements CommandInterface
 {
     /** @var Api */
     private $api;
@@ -36,6 +38,8 @@ final class UploadFilesCommand extends Command
         $this
             ->setDescription('Upload files from a local directory')
             ->addArgument('directory', InputArgument::REQUIRED, 'path to files')
+            ->addOption('from', 'from',InputOption::VALUE_REQUIRED, 'start point files')
+            ->addOption('until', 'until',InputOption::VALUE_REQUIRED, 'end point files')
         ;
     }
 
@@ -48,36 +52,24 @@ final class UploadFilesCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->style->title('Upload files');
-
         if (!$this->api->test()) {
             return 0;
         }
 
-        foreach ($this->findFiles($input->getArgument('directory')) as $file) {
+        $files = Files::fromInput($input);
+        $this->style->writeln('Scanning directory ...');
+        $this->style->section((string) $files);
+
+        $progressBar = $this->style->createProgressBar($files->count());
+        foreach ($files as $file) {
             $this->api->upload($file);
-        }
-
-        return 1;
-    }
-
-    private function findFiles(string $directory): \Generator
-    {
-        $finder = new Finder();
-        $finder->files()->in($directory);
-
-        if (!$finder->hasResults()) {
-            $this->style->error(sprintf('No files found in %s', $directory));
-        }
-
-        $this->style->section(sprintf('Found %d files in %s', $finder->count(), $directory));
-        $progressBar = $this->style->createProgressBar($finder->count());
-
-        foreach ($finder as $file) {
-            yield $file;
             $progressBar->advance();
         }
+        $progressBar->finish();
 
-        $progressBar->finish();;
+        $this->style->newLine(2);
+        $this->style->definitionList('Api Summary', new TableSeparator() ,...$this->api->getInfo());
+
+        return 1;
     }
 }

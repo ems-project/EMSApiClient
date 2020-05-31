@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Exception\ResponseException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Finder\SplFileInfo;
@@ -16,6 +17,17 @@ final class Api
     private $client;
     /** @var LoggerInterface */
     private $logger;
+    /** @var array */
+
+    private $info = [
+        self::INFO_UPLOAD_FAILED => null,
+        self::INFO_UPLOAD_NEW => null,
+        self::INFO_UPLOAD_SKIPPED => null,
+    ];
+
+    private const INFO_UPLOAD_FAILED  = 'Failed file uploads';
+    private const INFO_UPLOAD_NEW     = 'New file uploads';
+    private const INFO_UPLOAD_SKIPPED = 'Skipped file uploads';
 
     public function __construct(string $url, string $token, LoggerInterface $logger)
     {
@@ -31,6 +43,17 @@ final class Api
         $this->logger = $logger;
     }
 
+    public function getInfo(): array
+    {
+        $info = [];
+
+        foreach (array_filter($this->info) as $text => $count) {
+            $info[] = [$text => $count];
+        }
+
+        return $info;
+    }
+
     public function test(): bool
     {
         try {
@@ -44,13 +67,19 @@ final class Api
         }
     }
 
-    public function upload(SplFileInfo $file): bool
+    public function upload(SplFileInfo $file)
     {
         try {
             $hash = sha1_file($file->getRealPath());
-            $type = (new FileinfoMimeTypeGuesser())->guessMimeType($file->getRealPath());
+            if ($this->hashExists($hash)) {
+                $this->info[self::INFO_UPLOAD_SKIPPED]++;
+                return;
+            }
 
-            $response = $this->client->request('POST', '/api/file/init-upload', [
+            $type = (new FileinfoMimeTypeGuesser())->guessMimeType($file->getRealPath());
+            $url = '/api/file/init-upload';
+
+            $response = $this->client->request('POST', $url, [
                 'headers' => ['Content-Type' => 'application/json'],
                 'body' => json_encode([
                     'name' => $file->getFilename(),
@@ -59,21 +88,30 @@ final class Api
                     'type' => $type,
                 ])
             ]);
-            $json = \json_decode($response->getContent(false), true);
+
+            $json = \json_decode($response->getContent(true), true);
             $success = $json['success'] ?? false;
 
             if (!$success) {
-                return false;
+                throw ResponseException::forFileInitUpload($response, $file);
             }
 
-            return $this->chunk($file, $type, $hash);
+            $this->chunk($file, $type, $hash);
         } catch (\Exception $e) {
             $this->logger->error($e->getMessage());
-            return false;
+            $this->info[self::INFO_UPLOAD_FAILED]++;
         }
     }
 
-    private function chunk(SplFileInfo $file, string $type, string $hash): bool
+    private function hashExists(string $hash): bool
+    {
+        $url = sprintf('/data/file/view/%s', $hash);
+        $response = $this->client->request('HEAD', $url);
+
+        return $response->getStatusCode() === 200 ? true: false;
+    }
+
+    private function chunk(SplFileInfo $file, string $type, string $hash)
     {
         try {
             $url = sprintf('/api/file/chunk/%s', $hash);
@@ -81,13 +119,17 @@ final class Api
                 'headers' => ['Content-Type' => $type],
                 'body' => file_get_contents($file->getRealPath())
             ]);
+            $json = \json_decode($response->getContent(true), true);
+            $success = $json['success'] ?? false;
 
-            $json = \json_decode($response->getContent(false), true);
+            if (!$success) {
+                throw ResponseException::forFileChunk($response, $file);
+            }
 
-            return $json['success'] ?? false;
+            $this->info[self::INFO_UPLOAD_NEW]++;
         } catch (\Exception $e) {
             $this->logger->error($e->getMessage());
-            return false;
+            $this->info[self::INFO_UPLOAD_FAILED]++;
         }
     }
 }
