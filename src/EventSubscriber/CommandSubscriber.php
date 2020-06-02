@@ -39,7 +39,7 @@ final class CommandSubscriber implements EventSubscriberInterface
 
         $io = new SymfonyStyle($event->getInput(), $event->getOutput());
         $io->title($this->createTitle($command));
-        $io->writeln(sprintf('Start time %s', (new \DateTime('now'))->format('H:i:s')));
+        $io->writeln(sprintf('Start time %s', (new \DateTime('now'))->format('h:i:s')));
         $this->stopwatch->start((string) $command->getName());
     }
 

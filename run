@@ -3,6 +3,8 @@
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+date_default_timezone_set('Europe/Brussels');
+
 use App\Kernel;
 use App\Application;
 use Symfony\Component\Console\Input\ArgvInput;

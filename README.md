@@ -13,10 +13,13 @@ Installation
 
 Download this repository and run composer install.
 
-Usage
+First usage
 -----
 
-First provide the **EMS_URL** and **EMS_TOKEN** in the [.env](.env) file
+Copy the [.env.dist](.env.dist) to a new file called **.env**.
+
+Provided the **EMS_URL** and **EMS_TOKEN** in the new [.env](.env) file 
+
 
 ````bash
 php run

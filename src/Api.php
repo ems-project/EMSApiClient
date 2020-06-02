@@ -71,14 +71,9 @@ final class Api
     {
         try {
             $hash = sha1_file($file->getRealPath());
-            if ($this->hashExists($hash)) {
-                $this->info[self::INFO_UPLOAD_SKIPPED]++;
-                return;
-            }
-
             $type = (new FileinfoMimeTypeGuesser())->guessMimeType($file->getRealPath());
-            $url = '/api/file/init-upload';
 
+            $url = '/api/file/init-upload';
             $response = $this->client->request('POST', $url, [
                 'headers' => ['Content-Type' => 'application/json'],
                 'body' => json_encode([
@@ -96,19 +91,16 @@ final class Api
                 throw ResponseException::forFileInitUpload($response, $file);
             }
 
+            if ($json['available']) {
+                $this->info[self::INFO_UPLOAD_SKIPPED]++;
+                return;
+            }
+
             $this->chunk($file, $type, $hash);
         } catch (\Exception $e) {
             $this->logger->error($e->getMessage());
             $this->info[self::INFO_UPLOAD_FAILED]++;
         }
-    }
-
-    private function hashExists(string $hash): bool
-    {
-        $url = sprintf('/data/file/view/%s', $hash);
-        $response = $this->client->request('HEAD', $url);
-
-        return $response->getStatusCode() === 200 ? true: false;
     }
 
     private function chunk(SplFileInfo $file, string $type, string $hash)
