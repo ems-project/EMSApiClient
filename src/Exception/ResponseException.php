@@ -16,7 +16,7 @@ final class ResponseException extends \Exception
     public static function forFileInitUpload(ResponseInterface $response, \SplFileInfo $file): ResponseException
     {
         return new self(vsprintf('Init upload file %s failed [%d]: %s', [
-            $file->getFilename(),
+            $file->getPathname(),
             $response->getStatusCode(),
             $response->getContent(false)
         ]));
@@ -25,7 +25,7 @@ final class ResponseException extends \Exception
     public static function forFileChunk(ResponseInterface $response, \SplFileInfo $file): ResponseException
     {
         return new self(vsprintf('Chunk file %s failed [%d]: %s', [
-            $file->getFilename(),
+            $file->getPathname(),
             $response->getStatusCode(),
             $response->getContent(false)
         ]));
